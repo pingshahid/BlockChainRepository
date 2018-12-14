@@ -5,15 +5,15 @@
 
  This code is based on code written by the Hyperledger Fabric community.
   Original code can be found here: https://github.com/hyperledger/fabric-samples/blob/release/chaincode/fabcar/fabcar.go
- */
+*/
 
 package main
 
-/* Imports  
-* 4 utility libraries for handling bytes, reading and writing JSON, 
-formatting, and string manipulation  
-* 2 specific Hyperledger Fabric specific libraries for Smart Contracts  
-*/ 
+/* Imports
+* 4 utility libraries for handling bytes, reading and writing JSON,
+formatting, and string manipulation
+* 2 specific Hyperledger Fabric specific libraries for Smart Contracts
+*/
 import (
 	"bytes"
 	"encoding/json"
@@ -28,22 +28,33 @@ import (
 type SmartContract struct {
 }
 
-/* Define Tuna structure, with 4 properties.  
+/* Define Tuna structure, with 4 properties.
 Structure tags are used by encoding/json library
 */
 type Tuna struct {
-	Vessel string `json:"vessel"`
+	Vessel    string `json:"vessel"`
 	Timestamp string `json:"timestamp"`
 	Location  string `json:"location"`
-	Holder  string `json:"holder"`
+	Holder    string `json:"holder"`
+}
+
+/* Define Patient structure, with 5 properties.
+Structure tags are used by encoding/json library
+*/
+type Patient struct {
+	PateintID   string `json:"patient"`
+	PatientName string `json:"patientname"`
+	InsuranceID string `json:"insuranceid"`
+	ClaimID     string `json:"claimid"`
+	Timestamp   string `json:"timestamp"`
 }
 
 /*
  * The Init method *
  called when the Smart Contract "tuna-chaincode" is instantiated by the network
- * Best practice is to have any Ledger initialization in separate function 
+ * Best practice is to have any Ledger initialization in separate function
  -- see initLedger()
- */
+*/
 func (s *SmartContract) Init(APIstub shim.ChaincodeStubInterface) sc.Response {
 	return shim.Success(nil)
 }
@@ -52,7 +63,7 @@ func (s *SmartContract) Init(APIstub shim.ChaincodeStubInterface) sc.Response {
  * The Invoke method *
  called when an application requests to run the Smart Contract "tuna-chaincode"
  The app also specifies the specific smart contract function to call with args
- */
+*/
 func (s *SmartContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response {
 
 	// Retrieve the requested Smart Contract function and arguments
@@ -68,16 +79,28 @@ func (s *SmartContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response 
 		return s.queryAllTuna(APIstub)
 	} else if function == "changeTunaHolder" {
 		return s.changeTunaHolder(APIstub, args)
+	} else if function == "getHistory" {
+		return s.getHistory(APIstub, args)
+	} else if function == "initPatientLedger" {
+		return s.initPatientLedger(APIstub)
+	} else if function == "recordPatient" {
+		return s.recordPatient(APIstub, args)
+	} else if function == "queryAllPatient" {
+		return s.queryAllPatient(APIstub)
+	} else if function == "changeClaimId" {
+		return s.changeClaimId(APIstub, args)
+	} else if function == "getPatientHistory" {
+		return s.getPatientHistory(APIstub, args)
 	}
 
-	return shim.Error("Invalid Smart Contract function name.")
+	return shim.Error("#########Invalid Smart Contract function name.!!" + function)
 }
 
 /*
  * The queryTuna method *
 Used to view the records of one particular tuna
 It takes one argument -- the key for the tuna in question
- */
+*/
 func (s *SmartContract) queryTuna(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	if len(args) != 1 {
@@ -94,7 +117,210 @@ func (s *SmartContract) queryTuna(APIstub shim.ChaincodeStubInterface, args []st
 /*
  * The initLedger method *
 Will add test data (10 tuna catches)to our network
- */
+*/
+func (s *SmartContract) initPatientLedger(APIstub shim.ChaincodeStubInterface) sc.Response {
+	patient := []Patient{
+		Patient{PatientName: "Miriam", PateintID: "941420a9", InsuranceID: "07c644df", ClaimID: "3fcf312a", Timestamp: "1504054225"},
+		Patient{PatientName: "Dave", PateintID: "ce915253", InsuranceID: "bbda2513", ClaimID: "a5c2692b", Timestamp: "1504054225"},
+		Patient{PatientName: "Igor", PateintID: "c7ca50e6", InsuranceID: "6e03c94d", ClaimID: "8fdb3fb5", Timestamp: "1504054225"},
+		Patient{PatientName: "Amalea", PateintID: "0629931a", InsuranceID: "59bf22ae", ClaimID: "fb0c926d", Timestamp: "1504054225"},
+		Patient{PatientName: "Rafa", PateintID: "c64025e7", InsuranceID: "77bf0422", ClaimID: "21a8bfb4", Timestamp: "1504054225"},
+		Patient{PatientName: "Shen", PateintID: "592b7b27", InsuranceID: "85e9cd27", ClaimID: "6c816316", Timestamp: "1504054225"},
+		Patient{PatientName: "Leila", PateintID: "62638c5a", InsuranceID: "a395a078", ClaimID: "6cf6ae11", Timestamp: "1504054225"},
+		Patient{PatientName: "Yuan", PateintID: "48077dc6", InsuranceID: "a8946632", ClaimID: "33abfa10", Timestamp: "1504054225"},
+		Patient{PatientName: "Carlo", PateintID: "82742888", InsuranceID: "08f55930", ClaimID: "611b1244", Timestamp: "1504054225"},
+		Patient{PatientName: "Fatima", PateintID: "7bd21150", InsuranceID: "8bd1621f", ClaimID: "d49a27df", Timestamp: "1504054225"},
+	}
+
+	i := 0
+	for i < len(patient) {
+		fmt.Println("i is ", i)
+		tunaAsBytes, _ := json.Marshal(patient[i])
+		APIstub.PutState(strconv.Itoa(i+1), tunaAsBytes)
+		fmt.Println("Added", patient[i])
+		i = i + 1
+	}
+
+	return shim.Success(nil)
+}
+
+/*
+ * The recordTuna method *
+Fisherman like Sarah would use to record each of her tuna catches.
+This method takes in five arguments (attributes to be saved in the ledger).
+*/
+func (s *SmartContract) recordPatient(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) != 6 {
+		return shim.Error("Incorrect number of arguments. Expecting 6")
+	}
+
+	//var tuna = Patient{PateintID: args[1], PatientName: args[2], InsuranceID: args[3], ClaimID: args[4], Timestamp: args[5]}
+	var tuna = Patient{PatientName: args[2], PateintID: args[1], InsuranceID: args[3], ClaimID: args[4], Timestamp: args[5]}
+	tunaAsBytes, _ := json.Marshal(tuna)
+	err := APIstub.PutState(args[0], tunaAsBytes)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Failed to record tuna catch: %s", args[0]))
+	}
+
+	return shim.Success(nil)
+}
+
+/*
+ * The queryAllTuna method *
+allows for assessing all the records added to the ledger(all tuna catches)
+This method does not take any arguments. Returns JSON string containing results.
+*/
+func (s *SmartContract) queryAllPatient(APIstub shim.ChaincodeStubInterface) sc.Response {
+
+	startKey := "0"
+	endKey := "999"
+
+	resultsIterator, err := APIstub.GetStateByRange(startKey, endKey)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing QueryResults
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add comma before array members,suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"Key\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(queryResponse.Key)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		buffer.WriteString("}")
+
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- queryAllTuna:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+/*
+ * The getHistory method *
+allows for assessing all the records added to the ledger(all tuna catches)
+This method does not take any arguments. Returns JSON string containing results.
+*/
+func (s *SmartContract) getPatientHistory(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	// startKey := "0"
+	// endKey := "999"
+
+	resultsIterator, err := APIstub.GetHistoryForKey(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing QueryResults
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+
+		buffer.WriteString("{\"TxId\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(queryResponse.TxId)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		buffer.WriteString("}")
+
+		bArrayMemberAlreadyWritten = true
+
+		//buffer.WriteString("}")
+
+		// Add comma before array members,suppress it for the first array member
+		// if bArrayMemberAlreadyWritten == true {
+		// 	buffer.WriteString(",")
+		// }
+
+		// buffer.WriteString("\"{Record\":")
+		// // Record is a JSON object, so we write as-is
+		// buffer.WriteString(string(queryResponse.Value))
+
+		// buffer.WriteString(", \"TxId\":")
+		// // Record is a JSON object, so we write as-is
+		// buffer.WriteString(string(queryResponse.TxId))
+		// // buffer.WriteString(", \"ChannelId\":")
+		// // // Record is a JSON object, so we write as-is
+		// // buffer.WriteString(string(queryResponse.ChannelId))
+		// buffer.WriteString("}")
+
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- getHistory:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+/*
+ * The changeTunaHolder method *
+The data in the world state can be updated with who has possession.
+This function takes in 2 arguments, tuna id and new holder name.
+*/
+func (s *SmartContract) changeClaimId(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+
+	tunaAsBytes, _ := APIstub.GetState(args[0])
+	if tunaAsBytes == nil {
+		return shim.Error("Could not locate tuna")
+	}
+	tuna := Patient{}
+
+	json.Unmarshal(tunaAsBytes, &tuna)
+	// Normally check that the specified argument is a valid holder of tuna
+	// we are skipping this check for this example
+	tuna.ClaimID = args[1]
+
+	tunaAsBytes, _ = json.Marshal(tuna)
+	err := APIstub.PutState(args[0], tunaAsBytes)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Failed to update claimID: %s", args[0]))
+	}
+
+	return shim.Success(nil)
+}
+
+/*
+ * The initLedger method *
+Will add test data (10 tuna catches)to our network
+*/
 func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Response {
 	tuna := []Tuna{
 		Tuna{Vessel: "923F", Location: "67.0006, -70.5476", Timestamp: "1504054225", Holder: "Miriam"},
@@ -123,16 +349,16 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 
 /*
  * The recordTuna method *
-Fisherman like Sarah would use to record each of her tuna catches. 
-This method takes in five arguments (attributes to be saved in the ledger). 
- */
+Fisherman like Sarah would use to record each of her tuna catches.
+This method takes in five arguments (attributes to be saved in the ledger).
+*/
 func (s *SmartContract) recordTuna(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	if len(args) != 5 {
 		return shim.Error("Incorrect number of arguments. Expecting 5")
 	}
 
-	var tuna = Tuna{ Vessel: args[1], Location: args[2], Timestamp: args[3], Holder: args[4] }
+	var tuna = Tuna{Vessel: args[1], Location: args[2], Timestamp: args[3], Holder: args[4]}
 
 	tunaAsBytes, _ := json.Marshal(tuna)
 	err := APIstub.PutState(args[0], tunaAsBytes)
@@ -146,8 +372,8 @@ func (s *SmartContract) recordTuna(APIstub shim.ChaincodeStubInterface, args []s
 /*
  * The queryAllTuna method *
 allows for assessing all the records added to the ledger(all tuna catches)
-This method does not take any arguments. Returns JSON string containing results. 
- */
+This method does not take any arguments. Returns JSON string containing results.
+*/
 func (s *SmartContract) queryAllTuna(APIstub shim.ChaincodeStubInterface) sc.Response {
 
 	startKey := "0"
@@ -182,6 +408,7 @@ func (s *SmartContract) queryAllTuna(APIstub shim.ChaincodeStubInterface) sc.Res
 		// Record is a JSON object, so we write as-is
 		buffer.WriteString(string(queryResponse.Value))
 		buffer.WriteString("}")
+
 		bArrayMemberAlreadyWritten = true
 	}
 	buffer.WriteString("]")
@@ -192,10 +419,62 @@ func (s *SmartContract) queryAllTuna(APIstub shim.ChaincodeStubInterface) sc.Res
 }
 
 /*
+ * The getHistory method *
+allows for assessing all the records added to the ledger(all tuna catches)
+This method does not take any arguments. Returns JSON string containing results.
+*/
+func (s *SmartContract) getHistory(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	// startKey := "0"
+	// endKey := "999"
+
+	resultsIterator, err := APIstub.GetHistoryForKey(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing QueryResults
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add comma before array members,suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+
+		buffer.WriteString(", \"{Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+
+		buffer.WriteString(", \"TxId\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.TxId))
+		// buffer.WriteString(", \"ChannelId\":")
+		// // Record is a JSON object, so we write as-is
+		// buffer.WriteString(string(queryResponse.ChannelId))
+		buffer.WriteString("}")
+
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- getHistory:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+/*
  * The changeTunaHolder method *
-The data in the world state can be updated with who has possession. 
-This function takes in 2 arguments, tuna id and new holder name. 
- */
+The data in the world state can be updated with who has possession.
+This function takes in 2 arguments, tuna id and new holder name.
+*/
 func (s *SmartContract) changeTunaHolder(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	if len(args) != 2 {
@@ -216,7 +495,7 @@ func (s *SmartContract) changeTunaHolder(APIstub shim.ChaincodeStubInterface, ar
 	tunaAsBytes, _ = json.Marshal(tuna)
 	err := APIstub.PutState(args[0], tunaAsBytes)
 	if err != nil {
-		return shim.Error(fmt.Sprintf("Failed to change tuna holder: %s", args[0]))
+		return shim.Error(fmt.Sprintf("Failed to update claimID: %s", args[0]))
 	}
 
 	return shim.Success(nil)
@@ -224,9 +503,9 @@ func (s *SmartContract) changeTunaHolder(APIstub shim.ChaincodeStubInterface, ar
 
 /*
  * main function *
-calls the Start function 
+calls the Start function
 The main function starts the chaincode in the container during instantiation.
- */
+*/
 func main() {
 
 	// Create a new Smart Contract

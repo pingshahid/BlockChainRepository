@@ -12,6 +12,7 @@ var Fabric_Client = require('fabric-client');
 var path = require('path');
 var util = require('util');
 var os = require('os');
+console.log("get_tuna #####");
 
 var fabric_client = new Fabric_Client();
 
@@ -49,6 +50,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
     } else {
         throw new Error('Failed to get user1.... run registerUser.js');
     }
+    console.log("queryTuna - requires 1 argument, ex: args: ['4'],");
 
     // queryTuna - requires 1 argument, ex: args: ['4'],
     const request = {
@@ -61,7 +63,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
     // send the query proposal to the peer
     return channel.queryByChaincode(request);
 }).then((query_responses) => {
-    console.log("Query has completed, checking results");
+    console.log("Query has completed, checking results########");
     // query_responses could have more than one  results if there multiple peers were used as targets
     if (query_responses && query_responses.length == 1) {
         if (query_responses[0] instanceof Error) {

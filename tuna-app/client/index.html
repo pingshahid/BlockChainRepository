@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Hyperledger Fabric Tuna Application</title>
+    <title>Block Chain HealthCare Claim Application</title>
     <link rel="icon" href="favicon.png" type="image/gif">
 
     <!-- require jquery and bootstrap scripts -->
@@ -63,13 +63,13 @@
   </head>
   <body ng-app="application" ng-controller="appController">
     <header>
-      <div id="left_header">Hyperledger Fabric Tuna Application</div>
-      <i id="right_header">Example Blockchain Application for Introduction to Hyperledger Fabric LFS171x</i>
+      <div id="left_header">Block Chain HealthCare Claim Application</div>
+      <!-- <i id="right_header">Example Blockchain Application for Introduction to Hyperledger Fabric LFS171x</i> -->
     </header>
 
     <div id="body">
       <div class="form-group">
-        <label>Query All Tuna Catches</label>
+        <label>List all Patients</label>
         <p><input id="queryAllTuna" type="submit" value="Query" class="btn btn-primary" ng-click="queryAllTuna()"></p>
       </div>
  
@@ -78,23 +78,54 @@
         <tr>
           <th>ID</th>
           <th>Timestamp</th>
-          <th>Holder</th>
-          <th>Catch Location <br>(Longitude, Latitude)</th>
-          <th>Vessel</th>
+          <th>Name</th>
+          <th>PatientID</th>
+          <th>InsuranceID</th>
+          <th>ClaimId</th>
         </tr>
 
         <tr ng-repeat="tuna in all_tuna">
           <td>{{tuna.Key}}</td>
           <td>{{tuna.timestamp}}</td>
-          <td>{{tuna.holder}}</td>
-          <td>{{tuna.location}}</td>
-          <td>{{tuna.vessel}}</td>
+          <td>{{tuna.patientname}}</td>
+          <td>{{tuna.patient}}</td>
+          <td>{{tuna.insuranceid}}</td>
+          <td>{{tuna.claimid}}</td>
         </tr>
       </table>
 
       <div class="form-group">
-        <label>Query a Specific Tuna Catch</label><br>
-        <h5 style="color:red;margin-bottom:2%" id="error_query">Error: Please enter a valid Tuna Id</h5>
+        <label>Get patient trasaction history</label><br>
+        <h5 style="color:red;margin-bottom:2%" id="error_query">Error: Please enter a valid Id</h5>
+        
+        Enter a catch number: <input id="getHistory" class="form-control" type="text" placeholder="Ex: 3" ng-model="tuna_id">
+        <input id="querySubmit" type="submit" value="Query" class="btn btn-primary" ng-click="getHistory()">
+      </div>
+
+      <table id="query_history" class="table" align="center">
+
+          <tr>
+            <th>Timestamp</th>
+            <th>Name</th>
+            <th>PatientID</th>
+            <th>InsuranceID</th>
+            <th>ClaimId</th>
+            <th>TxId</th>
+          </tr>
+  
+          <tr ng-repeat="tuna in query_history">
+            <td>{{tuna.timestamp}}</td>
+            <td>{{tuna.patientname}}</td>
+            <td>{{tuna.patient}}</td>
+            <td>{{tuna.insuranceid}}</td>
+            <td>{{tuna.claimid}}</td>
+            <td>{{tuna.TxId}}</td>
+          </tr>
+        </table>
+
+      <!-- <div class="form-group">
+        <label>Query a Specific Patients</label><br>
+        <h5 style="color:red;margin-bottom:2%" id="error_query">Error: Please enter a valid Id</h5>
         
         Enter a catch number: <input id="createName" class="form-control" type="text" placeholder="Ex: 3" ng-model="tuna_id">
         <input id="querySubmit" type="submit" value="Query" class="btn btn-primary" ng-click="queryTuna()">
@@ -104,38 +135,41 @@
 
         <tr>
           <th>Timestamp</th>
-          <th>Holder</th>
-          <th>Catch Location <br>(Longitude, Latitude)</th>
-          <th>Vessel</th>
+          <th>Name</th>
+          <th>PatientID</th>
+          <th>InsuranceID</th>
+          <th>ClaimId</th>
         </tr>
 
         <tr>
           <td>{{query_tuna.timestamp}}</td>
-          <td>{{query_tuna.holder}}</td>
-          <td>{{query_tuna.location}}</td>
-          <td>{{query_tuna.vessel}}</td>
+          <td>{{query_tuna.patientname}}</td>
+          <td>{{query_tuna.patient}}</td>
+          <td>{{query_tuna.insuranceid}}</td>
+          <td>{{query_tuna.claimid}}</td>
         </tr>
-      </table>
+      </table> -->
 
       <div class="form-group">
-        <label>Create Tuna Record</label>
+        <label>Create a Patient Record</label>
         <h5 style="color:green;margin-bottom:2%" id="success_create">Success! Tx ID: {{create_tuna}}</h5>
         <br>
-        Enter catch id: <input class="form-control" type="text" placeholder="Ex: 11" ng-model="tuna.id">
-        Enter name of vessel: <input class="form-control" type="text" placeholder="Ex: 0239L" ng-model="tuna.vessel">
-        Enter longitude: <input id="createName" class="form-control" type="text" placeholder="Ex: 28.012" ng-model="tuna.longitude"> 
-        Enter latitude: <input id="createName" class="form-control" type="text" placeholder="Ex: 150.405" ng-model="tuna.latitude">
+        Enter Id: <input class="form-control" type="text" placeholder="Ex: 11" ng-model="tuna.id">
+        Enter Patient ID: <input class="form-control" type="text" placeholder="Ex: 3fcf312a" ng-model="tuna.patientid">
+        Enter Patient Name: <input class="form-control" type="text" placeholder="Ex: Patrick" ng-model="tuna.patientname">
+        Enter Insurance ID: <input id="createName" class="form-control" type="text" placeholder="Ex: 3f2d312a" ng-model="tuna.insuranceid"> 
+        Enter Claim ID: <input id="createName" class="form-control" type="text" placeholder="Ex: a5c2692b" ng-model="tuna.claimid">
         Enter timestamp: <input class="form-control" type="text" placeholder="Ex: 4982342301" ng-model="tuna.timestamp">
-        Enter name of holder: <input class="form-control" type="text" placeholder="Ex: Hansel" ng-model="tuna.holder">
+        <!-- Enter name of holder: <input class="form-control" type="text" placeholder="Ex: Hansel" ng-model="tuna.holder"> -->
         <input id="createSubmit" type="submit" value="Create" class="btn btn-primary" ng-click="recordTuna()"> 
       </div>
 
       <div class="form-group">
-        <label>Change Tuna Holder</label><br>
+        <label>Update claimID</label><br>
         <h5 style="color:green;margin-bottom:2%" id="success_holder">Success! Tx ID: {{change_holder}}</h5>
-        <h5 style="color:red;margin-bottom:2%" id="error_holder">Error: Please enter a valid Tuna Id</h5>
+        <h5 style="color:red;margin-bottom:2%" id="error_holder">Error: Please enter a valid Id</h5>
         Enter a catch id between 1 and 10: <input class="form-control" name="assetSelect" placeholder="Ex: 1" ng-model="holder.id">
-        Enter name of new holder: <input class="form-control" name="assetSelect" placeholder="Ex: Barry" ng-model="holder.name">
+        Enter name of new claimID: <input class="form-control" name="assetSelect" placeholder="Ex: Barry" ng-model="holder.name">
         <input id="transferSubmit" type="submit" value="Change" class="btn btn-primary" ng-click="changeHolder()">
       </div>
 

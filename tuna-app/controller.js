@@ -61,7 +61,7 @@ return{
 		    const request = {
 		        chaincodeId: 'tuna-app',
 		        txId: tx_id,
-		        fcn: 'queryAllTuna',
+		        fcn: 'queryAllPatient',
 		        args: ['']
 		    };
 
@@ -90,11 +90,12 @@ return{
 		var array = req.params.tuna.split("-");
 		console.log(array);
 
-		var key = array[0]
-		var timestamp = array[2]
-		var location = array[1]
-		var vessel = array[4]
-		var holder = array[3]
+		var catchId = array[0]
+		var PateintID = array[1]
+		var PatientName = array[2]
+		var InsuranceID = array[3]
+		var ClaimID = array[4]
+		var Timestamp = array[5]
 
 
 		var fabric_client = new Fabric_Client();
@@ -142,8 +143,8 @@ return{
 		    const request = {
 		        //targets : --- letting this default to the peers assigned to the channel
 		        chaincodeId: 'tuna-app',
-		        fcn: 'recordTuna',
-		        args: [key, vessel, location, timestamp, holder],
+		        fcn: 'recordPatient',
+		        args: [catchId, PateintID, PatientName, InsuranceID, ClaimID, Timestamp],
 		        chainId: 'mychannel',
 		        txId: tx_id
 		    };
@@ -183,8 +184,10 @@ return{
 
 		        // get an eventhub once the fabric client has a user assigned. The user
 		        // is required bacause the event registration must be signed
-		        let event_hub = fabric_client.newEventHub();
-		        event_hub.setPeerAddr('grpc://localhost:7053');
+		        // let event_hub = fabric_client.newEventHub();
+		        // event_hub.setPeerAddr('grpc://localhost:7053');
+
+				let event_hub = channel.newChannelEventHub('localhost:7051');
 
 		        // using resolve the promise so that result status may be processed
 		        // under the then clause rather than having the catch clause process
@@ -208,7 +211,10 @@ return{
 		                    console.error('The transaction was invalid, code = ' + code);
 		                    resolve(return_status); // we could use reject(new Error('Problem with the tranaction, event status ::'+code));
 		                } else {
-		                    console.log('The transaction has been committed on peer ' + event_hub._ep._endpoint.addr);
+							//console.log('The transaction has been committed on peer ' + event_hub._ep._endpoint.addr);
+							console.log('The transaction has been committed on peer ' + event_hub.getPeerAddr());
+
+
 		                    resolve(return_status);
 		                }
 		            }, (err) => {
@@ -244,6 +250,7 @@ return{
 		});
 	},
 	get_tuna: function(req, res){
+		console.log("get_tuna #####");
 
 		var fabric_client = new Fabric_Client();
 		var key = req.params.id
@@ -292,6 +299,76 @@ return{
 		    // send the query proposal to the peer
 		    return channel.queryByChaincode(request);
 		}).then((query_responses) => {
+		    console.log("Query has completed, checking results######");
+		    // query_responses could have more than one  results if there multiple peers were used as targets
+		    if (query_responses && query_responses.length == 1) {
+		        if (query_responses[0] instanceof Error) {
+		            console.error("error from query = ", query_responses[0]);
+		            res.send("Could not locate tuna")
+		            
+		        } else {
+					console.log("Response is ", query_responses[0].toString());
+					console.log("Res is ", res.toString);
+		            res.send(query_responses[0].toString())
+		        }
+		    } else {
+		        console.log("No payloads were returned from query");
+		        res.send("Could not locate tuna")
+		    }
+		}).catch((err) => {
+		    console.error('Failed to query successfully :: ' + err);
+		    res.send("Could not locate tuna")
+		});
+	},get_history: function(req, res){
+		//console.log("get_history #####");
+
+		var fabric_client = new Fabric_Client();
+		var key = req.params.id
+
+		// setup the fabric network
+		var channel = fabric_client.newChannel('mychannel');
+		var peer = fabric_client.newPeer('grpc://localhost:7051');
+		channel.addPeer(peer);
+
+		//
+		var member_user = null;
+		var store_path = path.join(os.homedir(), '.hfc-key-store');
+		console.log('Store path:'+store_path);
+		var tx_id = null;
+
+		// create the key value store as defined in the fabric-client/config/default.json 'key-value-store' setting
+		Fabric_Client.newDefaultKeyValueStore({ path: store_path
+		}).then((state_store) => {
+		    // assign the store to the fabric client
+		    fabric_client.setStateStore(state_store);
+		    var crypto_suite = Fabric_Client.newCryptoSuite();
+		    // use the same location for the state store (where the users' certificate are kept)
+		    // and the crypto store (where the users' keys are kept)
+		    var crypto_store = Fabric_Client.newCryptoKeyStore({path: store_path});
+		    crypto_suite.setCryptoKeyStore(crypto_store);
+		    fabric_client.setCryptoSuite(crypto_suite);
+
+		    // get the enrolled user from persistence, this user will sign all requests
+		    return fabric_client.getUserContext('user1', true);
+		}).then((user_from_store) => {
+		    if (user_from_store && user_from_store.isEnrolled()) {
+		        console.log('Successfully loaded user1 from persistence');
+		        member_user = user_from_store;
+		    } else {
+		        throw new Error('Failed to get user1.... run registerUser.js');
+		    }
+
+		    // queryTuna - requires 1 argument, ex: args: ['4'],
+		    const request = {
+		        chaincodeId: 'tuna-app',
+		        txId: tx_id,
+		        fcn: 'getPatientHistory',
+		        args: [key]
+		    };
+
+		    // send the query proposal to the peer
+		    return channel.queryByChaincode(request);
+		}).then((query_responses) => {
 		    console.log("Query has completed, checking results");
 		    // query_responses could have more than one  results if there multiple peers were used as targets
 		    if (query_responses && query_responses.length == 1) {
@@ -300,8 +377,14 @@ return{
 		            res.send("Could not locate tuna")
 		            
 		        } else {
-		            console.log("Response is ", query_responses[0].toString());
-		            res.send(query_responses[0].toString())
+					console.log("Response is :", query_responses[0].toString());
+					console.log("Response is :", query_responses[0].toString().length);
+					if(query_responses[0].toString().length > 2){
+						res.send(query_responses[0].toString())
+					}else{
+						res.send("Could not locate tuna")
+					}
+		            
 		        }
 		    } else {
 		        console.log("No payloads were returned from query");
@@ -364,7 +447,7 @@ return{
 		    var request = {
 		        //targets : --- letting this default to the peers assigned to the channel
 		        chaincodeId: 'tuna-app',
-		        fcn: 'changeTunaHolder',
+		        fcn: 'changeClaimId',
 		        args: [key, holder],
 		        chainId: 'mychannel',
 		        txId: tx_id
@@ -405,8 +488,11 @@ return{
 
 		        // get an eventhub once the fabric client has a user assigned. The user
 		        // is required bacause the event registration must be signed
-		        let event_hub = fabric_client.newEventHub();
-		        event_hub.setPeerAddr('grpc://localhost:7053');
+		        // let event_hub = fabric_client.newEventHub();
+				// event_hub.setPeerAddr('grpc://localhost:7053');
+				
+				let event_hub = channel.newChannelEventHub('localhost:7051');
+
 
 		        // using resolve the promise so that result status may be processed
 		        // under the then clause rather than having the catch clause process
@@ -430,7 +516,8 @@ return{
 		                    console.error('The transaction was invalid, code = ' + code);
 		                    resolve(return_status); // we could use reject(new Error('Problem with the tranaction, event status ::'+code));
 		                } else {
-		                    console.log('The transaction has been committed on peer ' + event_hub._ep._endpoint.addr);
+							//console.log('The transaction has been committed on peer ' + event_hub._ep._endpoint.addr);
+							console.log('The transaction has been committed on peer ' + event_hub.getPeerAddr());
 		                    resolve(return_status);
 		                }
 		            }, (err) => {
